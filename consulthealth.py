@@ -235,4 +235,4 @@ if st.button("Analyze Symptoms"):
         )
 
 st.markdown("---")
-st.caption(":blue[For educational purposes. Not for emergency use. In urgent situations, call your local emergency number!]")
+st.caption(":blue[Code by Anshuman Sinha]")
