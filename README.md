@@ -53,10 +53,10 @@ For any life-threatening or red-flag symptoms, the app provides immediate, visib
 
 ## Deployment
 
-1. Save the application code as `health_consultation.py`
+1. Save the application code as `consulthealth.py`
 2. In terminal, run:  
    ```
-   streamlit run health_consultation.py
+   streamlit run consulthealth.py
    ```
 3. Access via local or remote browser depending on deployment settings.
 
