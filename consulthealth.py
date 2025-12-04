@@ -1,238 +1,318 @@
 import streamlit as st
 
-# 100+ symptom database (keyword: [suggested causes])
+# -----------------------------------------------------------------------------
+# 1. CONFIGURATION
+# -----------------------------------------------------------------------------
+st.set_page_config(
+    page_title="Clinical Support System",
+    page_icon="⚕️",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
+# -----------------------------------------------------------------------------
+# 2. PROFESSIONAL STYLING (Seamless Panel Layout)
+# -----------------------------------------------------------------------------
+st.markdown("""
+<style>
+    /* --- LAYOUT FIXES (PANEL ALIGNMENT) --- */
+    
+    /* Remove the huge white gap at the top of the main area */
+    .block-container {
+        padding-top: 1rem !important;
+        padding-bottom: 5rem !important;
+    }
+    
+    /* Remove the gap at the top of the sidebar */
+    [data-testid="stSidebarUserContent"] {
+        padding-top: 2rem !important;
+    }
+    
+    /* Force the main background to be a professional medical grey */
+    [data-testid="stAppViewContainer"] {
+        background-color: #f4f6f8;
+    }
+    
+    /* Sidebar Styling - Distinct Panel */
+    [data-testid="stSidebar"] {
+        background-color: #ffffff;
+        border-right: 1px solid #dce1e6;
+    }
+    
+    /* --- TYPOGRAPHY --- */
+    h1, h2, h3, h4, h5 {
+        color: #1e293b !important; /* Dark Slate */
+        font-family: 'Segoe UI', Helvetica, Arial, sans-serif;
+        font-weight: 600;
+        letter-spacing: -0.5px;
+    }
+    
+    p, li, span, label, div {
+        color: #475569 !important; /* Slate Grey */
+        font-family: 'Segoe UI', sans-serif;
+    }
+    
+    /* --- COMPONENTS --- */
+    
+    /* Input Areas - White Panel look */
+    .stTextArea textarea {
+        background-color: #ffffff !important;
+        color: #1e293b !important;
+        border: 1px solid #cbd5e1;
+        border-radius: 6px;
+    }
+    .stTextArea textarea:focus {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+    }
+    
+    /* Buttons - High Contrast & Visible Text */
+    div.stButton > button {
+        background-color: #2563eb !important; /* Royal Blue */
+        color: #ffffff !important;
+        border: none;
+        border-radius: 6px;
+        padding: 0.75rem 1rem;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        transition: all 0.2s;
+    }
+    div.stButton > button:hover {
+        background-color: #1d4ed8 !important;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+    
+    /* Cards */
+    .clinical-card {
+        background-color: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    }
+    
+    /* Alerts */
+    .alert-box {
+        background-color: #fef2f2;
+        border: 1px solid #fee2e2;
+        border-left: 4px solid #ef4444;
+        padding: 1rem;
+        border-radius: 6px;
+        margin-bottom: 1rem;
+    }
+    .alert-title {
+        color: #991b1b !important;
+        font-weight: 700;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        margin-bottom: 0.25rem;
+    }
+    
+    /* Info Box */
+    .info-box {
+        background-color: #eff6ff;
+        border: 1px solid #dbeafe;
+        border-left: 4px solid #3b82f6;
+        padding: 1rem;
+        border-radius: 6px;
+    }
+    
+    /* Header Divider */
+    hr {
+        margin: 1.5rem 0;
+        border-color: #e2e8f0;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# -----------------------------------------------------------------------------
+# 3. KNOWLEDGE BASE
+# -----------------------------------------------------------------------------
 COMMON_SYMPTOM_GROUPS = {
-    "fever": ["Infection (e.g. Flu, COVID-19, Malaria, Typhoid)", "Heat stroke", "Autoimmune disorders"],
-    "chills": ["Infection", "Cold exposure", "Sepsis"],
-    "cough": ["Common cold", "COVID-19", "Asthma", "Bronchitis", "Allergy", "Pneumonia"],
-    "sore throat": ["Pharyngitis", "Tonsillitis", "Allergy", "Viral infection"],
-    "runny nose": ["Common cold", "Allergic rhinitis", "Sinusitis"],
-    "stuffy nose": ["Sinusitis", "Allergic rhinitis", "Common cold"],
-    "headache": ["Migraine", "Tension headache", "Sinusitis", "Dehydration", "Eye strain"],
-    "migraine": ["Migraine disorder", "Food triggers", "Stress"],
-    "dizziness": ["Low blood pressure", "Vertigo", "Anemia", "Dehydration", "Inner ear infection"],
-    "lightheadedness": ["Low blood sugar", "Dehydration", "Low blood pressure"],
-    "fatigue": ["Anemia", "Hypothyroid", "Depression", "Chronic fatigue syndrome", "Sleep deprivation"],
-    "weakness": ["Anemia", "Muscle fatigue", "Infection", "Electrolyte imbalance"],
-    "shortness of breath": ["Asthma", "COPD", "Heart failure", "Pneumonia", "Anxiety"],
-    "chest pain": ["Heart attack", "Angina", "Gastric reflux", "Anxiety", "Muscle strain"],
-    "palpitations": ["Anxiety", "Arrhythmia", "Caffeine", "Hyperthyroid"],
-    "fainting": ["Low blood pressure", "Heart problem", "Vasovagal syncope"],
-    "sweating": ["Fever", "Anxiety", "Hypoglycemia"],
-    "nausea": ["Gastroenteritis", "Pregnancy", "Migraine", "Food poisoning", "Medication side-effect"],
-    "vomiting": ["Gastroenteritis", "Migraine", "Motion sickness", "Food poisoning"],
-    "diarrhea": ["Infection", "Food intolerance", "IBS", "Food poisoning"],
-    "constipation": ["Low fiber diet", "Dehydration", "IBS", "Hypothyroid"],
-    "abdominal pain": ["Indigestion", "Gastritis", "Gallstones", "Appendicitis", "Constipation"],
-    "stomach pain": ["Indigestion", "Gastritis", "Peptic ulcer", "Intestinal infection"],
-    "bloated": ["Indigestion", "IBS", "Food intolerance"],
-    "gas": ["Indigestion", "Lactose intolerance", "IBS"],
-    "heartburn": ["GERD", "Stomach ulcer", "Hiatus hernia"],
-    "loss of appetite": ["Infection", "Depression", "Liver disease"],
-    "weight loss": ["Hyperthyroid", "Diabetes", "Cancer", "Chronic infection"],
-    "weight gain": ["Hypothyroid", "Overeating", "Fluid retention"],
-    "back pain": ["Muscle strain", "Slip disc", "Arthritis", "Kidney stone"],
-    "neck pain": ["Muscle strain", "Spondylosis"],
-    "joint pain": ["Arthritis", "Injury", "Infection", "Bursitis"],
-    "swollen joints": ["Arthritis", "Infection", "Gout"],
-    "muscle cramps": ["Electrolyte imbalance", "Dehydration", "Overuse"],
-    "tingling": ["Nerve compression", "Vitamin deficiency", "Diabetes neuropathy"],
-    "numbness": ["Nerve compression", "Stroke", "Diabetes neuropathy"],
-    "rash": ["Allergy", "Viral infection", "Eczema", "Psoriasis"],
-    "itchy skin": ["Allergy", "Eczema", "Fungal infection"],
-    "dry skin": ["Dehydration", "Eczema", "Hypothyroid"],
-    "red eyes": ["Conjunctivitis", "Allergy", "Infection"],
-    "watery eyes": ["Allergy", "Viral infection", "Irritation"],
-    "blurred vision": ["Glasses needed", "Diabetes", "Cataract", "Eye infection"],
-    "eye pain": ["Infection", "Glaucoma", "Eye strain"],
-    "ear pain": ["Ear infection", "Ear wax", "Injury"],
-    "hearing loss": ["Wax impaction", "Ear infection", "Age-related loss"],
-    "ringing in ears": ["Tinnitus", "Noise exposure", "Ear infection"],
-    "tooth pain": ["Cavity", "Gum disease", "Infection"],
-    "bleeding gums": ["Gum disease", "VIT C deficiency", "Improper brushing"],
-    "mouth ulcers": ["Stress", "Trauma", "Vitamin deficiency", "Viral infection"],
-    "sore tongue": ["Trauma", "Burn", "Vitamin deficiency"],
-    "thirst": ["Dehydration", "Diabetes", "High salt intake"],
-    "frequent urination": ["Diabetes", "UTI", "Pregnancy"],
-    "burning urination": ["UTI", "STD", "Dehydration"],
-    "blood in urine": ["UTI", "Stone", "Kidney infection"],
-    "urinary incontinence": ["Old age", "Nerve disease", "UTI"],
-    "missed period": ["Pregnancy", "PCOS", "Stress", "Thyroid"],
-    "heavy periods": ["Fibroids", "Hormonal imbalance"],
-    "painful periods": ["Dysmenorrhea", "Endometriosis"],
-    "erectile dysfunction": ["Vascular disease", "Diabetes", "Anxiety"],
-    "decreased libido": ["Depression", "Hormonal", "Relationship issues"],
-    "sweats at night": ["Tuberculosis", "Cancers", "Menopause"],
-    "hot flashes": ["Menopause", "Hormonal imbalance"],
-    "cold hands": ["Poor circulation", "Raynaud's"],
-    "swollen feet": ["Heart failure", "Kidney disease", "Injury"],
-    "difficulty swallowing": ["Throat infection", "GERD", "Oesophageal growth"],
-    "hoarseness": ["Laryngitis", "Vocal strain", "Smoking"],
-    "memory loss": ["Dementia", "Depression", "Head injury", "Hypothyroid"],
-    "confusion": ["Low sodium", "Infection", "Stroke", "Dehydration"],
-    "anxiety": ["Generalized Anxiety Disorder", "Caffeine", "Thyroid disease"],
-    "depression": ["Major depression", "Bipolar disorder", "Thyroid", "Life stress"],
-    "insomnia": ["Anxiety", "Caffeine", "Depression", "Chronic pain"],
-    "sleepiness": ["Sleep apnea", "Narcolepsy", "Sedative medication"],
-    "bad breath": ["Oral hygiene", "Dental caries", "Sinusitis"],
-    "snoring": ["Nasal blockage", "Obesity", "Sleep apnea"],
-    "night sweats": ["TB", "Infection", "Cancer", "Menopause"],
-    "hair loss": ["Alopecia", "Thyroid", "Stress", "Iron deficiency"],
-    "bruising": ["Platelet disorder", "Blood thinner drugs", "Injury"],
-    "nosebleed": ["Dry air", "Injury", "Nose picking", "Platelet disorder"],
-    "yellow skin": ["Jaundice", "Liver disease", "Hemolysis"],
-    "pale skin": ["Anemia", "Shock", "Blood loss"],
-    "purple spots": ["Purpura", "Bleeding disorder", "Infection"],
-    "leg swelling": ["Heart failure", "Varicose veins", "Injury"],
-    "lump": ["Benign tumor", "Cancer", "Infection"],
-    "weight change": ["Diet", "Thyroid", "Diabetes"],
-    "loss of smell": ["COVID-19", "Sinus infection"],
-    "loss of taste": ["COVID-19", "Mouth infection", "Zinc deficiency"],
-    "difficulty breathing": ["Asthma", "COPD", "Heart failure", "Pneumonia"],
-    "wheezing": ["Asthma", "Bronchitis", "Allergy"],
-    "joint stiffness": ["Osteoarthritis", "RA", "Injury"],
-    "abdominal mass": ["Hernia", "Tumor", "Cyst"],
-    "change in bowel habits": ["Colon cancer", "IBS", "Infection"],
-    "lumps in breast": ["Benign cyst", "Breast cancer", "Hormonal changes"],
-    "nipple discharge": ["Hormonal", "Infection", "Tumor"],
-    "hiccups": ["Gastric distension", "Neurological", "Liver disease"],
-    "difficulty walking": ["Stroke", "Ataxia", "Muscle weakness"],
-    "balance problems": ["Vertigo", "Ear infection", "Neuropathy"],
-    "loss of coordination": ["Cerebellar disease", "Stroke", "Medication side effect"],
-    "slurred speech": ["Stroke", "Alcohol", "Muscle disease"],
-    "vision loss": ["Glaucoma", "Retinal detachment", "Optic neuritis"],
-    "difficulty concentrating": ["ADHD", "Anxiety", "Lack of sleep", "Stress"],
-    "muscle weakness": ["Nerve injury", "Polio", "Muscle disease"],
-    "rapid heartbeat": ["Arrhythmia", "Anxiety", "Thyroid disease"],
+    "fever": ["Infectious Pathology", "Systemic Inflammatory Response", "Autoimmune Etiology"],
+    "chills": ["Bacteremia", "Hypothermia", "Acute Febrile Illness"],
+    "cough": ["URI", "Bronchitis", "Pneumonia", "Reactive Airway Disease"],
+    "sore throat": ["Pharyngitis", "Tonsillitis", "Epiglottitis"],
+    "headache": ["Migraine", "Tension Cephalalgia", "Intracranial Hypertension", "Sinusitis"],
+    "dizziness": ["Orthostatic Hypotension", "Vestibular Dysfunction", "Anemia", "Hypovolemia"],
+    "fatigue": ["Anemia", "Endocrine Dysfunction", "Chronic Fatigue", "Post-Viral Sequelae"],
+    "chest pain": ["Acute Coronary Syndrome", "Angina Pectoris", "GERD", "Costochondritis"],
+    "shortness of breath": ["Dyspnea", "COPD Exacerbation", "Congestive Heart Failure", "Pneumonia"],
+    "nausea": ["Gastroenteritis", "Gastritis", "Vestibular Neuritis"],
+    "abdominal pain": ["Acute Abdomen", "Appendicitis", "Cholecystitis", "Diverticulitis"],
+    "back pain": ["Lumbar Strain", "Herniated Nucleus Pulposus", "Pyelonephritis"],
+    "joint pain": ["Arthralgia", "Osteoarthritis", "Rheumatoid Arthritis", "Septic Arthritis"],
+    "rash": ["Dermatitis", "Urticaria", "Viral Exanthem", "Drug Eruption"],
+    "blurred vision": ["Refractive Error", "Retinopathy", "Cataract"],
+    "palpitations": ["Arrhythmia", "Sinus Tachycardia", "Thyrotoxicosis"],
+    "swollen feet": ["Peripheral Edema", "Venous Insufficiency", "Deep Vein Thrombosis"],
+    "insomnia": ["Psychophysiological Insomnia", "Sleep Apnea", "Restless Leg Syndrome"],
+    "high blood pressure": ["Essential Hypertension", "Hypertensive Urgency", "Renal Artery Stenosis"],
 }
 
-# Emergency alert rules (symptom keyword: message)
 EMERGENCY_SYMBOLS = {
-    "chest pain": "⚠️ Chest pain can indicate heart attack. Call emergency services immediately!",
-    "severe headache": "⚠️ Sudden severe headache may signal brain bleed. Urgent care needed!",
-    "shortness of breath": "⚠️ Severe breathing difficulty: Call emergency or visit ER.",
-    "weakness on one side": "⚠️ Possible stroke detected. Call emergency services now!",
-    "unconscious": "⚠️ Unconsciousness is a medical emergency. Seek immediate help!",
-    "slurred speech": "⚠️ Sudden slurred speech: Possible stroke – call emergency!",
-    "blood in stool": "⚠️ Blood in stool: Seek urgent medical evaluation.",
-    "blood in vomit": "⚠️ Vomiting blood: Go to the ER now.",
-    "blood in urine": "⚠️ Blood in urine may be kidney/urinary issue. See a doctor soon.",
-    "loss of vision": "⚠️ Sudden vision loss: See a doctor now.",
-    "seizure": "⚠️ Seizure/fits: Seek urgent medical attention.",
-    "suicidal thoughts": "⚠️ Mental health emergency. Seek urgent professional help or helpline.",
-    "high fever": "⚠️ High fever over 104F (40C) – seek care now.",
-    "difficulty breathing": "⚠️ Severe breathing issue can be life-threatening. Seek urgent help!",
+    "chest pain": "High Priority: Rule out ACS/Cardiac Event",
+    "shortness of breath": "High Priority: Assess Respiratory Status",
+    "unconscious": "Emergency: Immediate Resuscitation Required",
+    "slurred speech": "Emergency: Stroke Protocol Activation",
+    "blood in vomit": "High Priority: GI Bleed Risk Assessment",
+    "severe headache": "High Priority: Neurological Evaluation Required",
+    "seizure": "Emergency: Seizure Management Protocol",
+    "suicidal thoughts": "Emergency: Psychiatric Evaluation Required",
 }
 
-# OTC advice
 OTC_MED_GUIDE = {
-    "fever": "Paracetamol (acetaminophen) as directed. Drink fluids. If high or persistent, seek doctor.",
-    "cough": "Steam inhalation, honey, lozenges. See doctor if severe, persistent, or with blood.",
-    "runny nose": "Decongestants, saline nasal spray, rest.",
-    "sore throat": "Warm fluids, saltwater gargle, lozenges.",
-    "headache": "Paracetamol, ibuprofen if not allergic. Avoid screens, hydrate.",
-    "migraine": "Rest in a dark room, paracetamol, use migraine prescription if diagnosed.",
-    "back pain": "Rest, gentle stretching, hot pack, over-the-counter pain relief.",
-    "muscle cramps": "Stretch, hydrate, electrolyte solutions.",
-    "heartburn": "Antacids after meals, avoid spicy/fatty food.",
-    "allergy": "Antihistamines (cetirizine, loratadine), avoid triggers.",
-    "constipation": "Increase fiber, drink water, OTC laxatives.",
-    "diarrhea": "ORS (oral rehydration), bananas, rice. Seek care if blood or dehydration.",
-    "itchy skin": "Moisturizer, anti-itch creams, antihistamine for allergy.",
-    "dry skin": "Fragrance-free moisturizer. Use mild soap.",
-    "rash": "Apply calamine, avoid scratching, keep clean.",
-    "ear pain": "Warm compress. OTC pain medication.",
-    "mouth ulcers": "Gargle, topical analgesic gels.",
-    "tooth pain": "Painkillers, clove oil. See dentist.",
-    "stomach pain": "Antacids, avoid spicy/fatty food.",
-    "indigestion": "Antacid, small frequent meals.",
-    "nausea": "Ginger, rest, avoid oily food.",
-    "vomiting": "Hydrate with small sips. Seek care if persistent.",
-    "bloating": "Peppermint, gentle walk, antacids.",
-    "gas": "OTC anti-gas meds, avoid carbonated drinks.",
-    "nasal congestion": "Steam inhalation, saline drops.",
-    "dizziness": "Sit/lie down, fluids, avoid sudden standing.",
-    "minor swelling": "Rest, ice, elevate, compression.",
-    "sneezing": "Antihistamine, avoid allergens.",
-    "bruising": "Ice packs, elevate area.",
-    "bad breath": "Brush, floss, mouthwash.",
-    # ... extend as needed
+    "fever": "Acetaminophen/Paracetamol. Monitor temperature.",
+    "cough": "Antitussives or Expectorants. Hydration.",
+    "headache": "Analgesics (NSAID or Acetaminophen).",
+    "migraine": "Analgesics. Rest in low-light environment.",
+    "nausea": "Antiemetics or clear fluids.",
+    "heartburn": "Antacids or H2 Blockers.",
+    "allergy": "Antihistamines (Diphenhydramine/Cetirizine).",
+    "diarrhea": "Loperamide. Electrolyte hydration.",
+    "muscle cramps": "Electrolyte replacement. Stretching.",
+    "skin rash": "Topical Hydrocortisone. Antihistamine.",
 }
 
-WELLNESS_TIPS = (
-    "• Drink 2–3 liters of water daily.\n"
-    "• Get 7–8 hours of sleep every night.\n"
-    "• Eat a balanced diet with fruits, vegetables, proteins, and whole grains.\n"
-    "• Exercise at least 150 minutes per week.\n"
-    "• Manage stress with mindfulness or hobbies.\n"
-    "• Foster social connections.\n"
-    "• Avoid smoking and limit alcohol.\n"
-)
-
-st.title("🩺 Health Consultation")
-st.markdown(
-    """
-    **Describe your symptoms below** (write multiple symptoms separated with commas or in a sentence),<br>
-    and get basic health advice, likely causes, OTC suggestions, and triage guidance.<br>
-    <br>
-    :red[**Important:**] This tool does *not* diagnose, nor replace professional medical care.
-    If in doubt or if symptoms worsen, **consult a healthcare provider**.
-    """,
-    unsafe_allow_html=True
-)
-
-user_input = st.text_area(
-    "Describe your symptoms:",
-    placeholder="e.g. chest pain and sweating, cough and fever, joint pain"
-)
-
+# -----------------------------------------------------------------------------
+# 4. ANALYSIS LOGIC
+# -----------------------------------------------------------------------------
 def analyze_symptoms(text):
     text = text.lower()
     detected = []
     potential_causes = set()
     emergency_msgs = []
     otc_recommendations = []
-    # Detect emergency symptoms first (promptly display those)
+    
     for symptom, alert in EMERGENCY_SYMBOLS.items():
         if symptom in text:
             emergency_msgs.append(alert)
-    # Detect recognized symptoms (for cause/OTC/advice)
+            
     for symptom, causes in COMMON_SYMPTOM_GROUPS.items():
         if symptom in text:
             detected.append(symptom)
-            for c in causes:
-                potential_causes.add(c)
-            # OTC med suggestion if available
+            potential_causes.update(causes)
+            
             otc = OTC_MED_GUIDE.get(symptom)
             if otc:
-                otc_recommendations.append(f"{symptom.title()}: {otc}")
-    if not detected:
-        return None, None, None, emergency_msgs
-    return detected, sorted(set(potential_causes)), otc_recommendations, emergency_msgs
+                otc_recommendations.append(f"<b>{symptom.title()}</b>: {otc}")
+                
+    if not detected and not emergency_msgs:
+        return None, None, None, None
+        
+    return detected, sorted(list(potential_causes)), otc_recommendations, emergency_msgs
 
-if st.button("Analyze Symptoms"):
-    detected_symptoms, causes, meds, emergencies = analyze_symptoms(user_input)
-    if emergencies:
-        st.error("\n\n".join(emergencies))
-    if detected_symptoms:
-        st.markdown("### 🔍 Symptoms detected:")
-        st.write(", ".join(sorted(detected_symptoms)))
-        st.markdown("### Possible causes:")
-        for cause in causes:
-            st.write(f"- {cause}")
-        if meds:
-            st.markdown("### 💊 OTC Medication / Home Care:")
-            for m in meds:
-                st.write(f"- {m}")
-        else:
-            st.info("No OTC suggestions for detected symptoms.")
-        st.markdown("### 🛡️ General Wellness Tips:")
-        st.info(WELLNESS_TIPS)
-    elif not emergencies:
-        st.warning(
-            "No recognizable symptoms found in your input. "
-            "Please try different words or add more detail."
-        )
+# -----------------------------------------------------------------------------
+# 5. SIDEBAR LAYOUT
+# -----------------------------------------------------------------------------
+with st.sidebar:
+    st.markdown("### System Tools")
+    st.markdown("Use this interface to analyze reported symptoms against the clinical database.")
+    
+    st.markdown("---")
+    
+    st.markdown("#### Database Version")
+    st.caption("Standard Clinical Set v1.0")
+    
+    st.markdown("#### Mode")
+    st.caption("Triage Assistance")
+    
+    st.markdown("---")
+    st.caption("Note: This system provides algorithmic suggestions based on keyword matching.")
 
-st.markdown("---")
-st.caption(":blue[Code by Anshuman Sinha]")
+# -----------------------------------------------------------------------------
+# 6. MAIN INTERFACE
+# -----------------------------------------------------------------------------
+# Creating a "Header" look manually since we removed default padding
+st.markdown("""
+<div style="background-color: white; padding: 1.5rem; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 2rem;">
+    <h1 style="margin: 0; font-size: 1.8rem; color: #0f172a;">Clinical Decision Support System</h1>
+    <p style="margin: 0.5rem 0 0 0; color: #64748b;">Symptom Triage & Differential Analysis</p>
+</div>
+""", unsafe_allow_html=True)
+
+input_col, help_col = st.columns([2, 1])
+
+with input_col:
+    st.markdown("#### Clinical Notes / Symptoms")
+    user_input = st.text_area(
+        "Input",
+        height=150,
+        label_visibility="collapsed",
+        placeholder="Enter patient symptoms here (e.g., severe headache, nausea, mild fever)..."
+    )
+    
+    process_btn = st.button("Run Analysis")
+
+with help_col:
+    st.markdown("""
+    <div class="clinical-card" style="padding: 1rem;">
+        <div style="font-weight: 700; font-size: 0.8rem; text-transform: uppercase; color: #94a3b8; margin-bottom: 0.5rem;">Instructions</div>
+        <div style="font-size: 0.9rem; line-height: 1.5;">
+        • Enter primary symptoms separated by commas or in natural language.<br>
+        • The system will identify clinical keywords.<br>
+        • Critical keywords will trigger high-priority alerts.
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+# -----------------------------------------------------------------------------
+# 7. RESULTS DISPLAY
+# -----------------------------------------------------------------------------
+if process_btn:
+    st.markdown("### Analysis Results")
+    
+    if user_input:
+        detected_symptoms, causes, meds, emergencies = analyze_symptoms(user_input)
+
+        if emergencies:
+            for alert in emergencies:
+                st.markdown(f"""
+                <div class="alert-box">
+                    <div class="alert-title">⚠️ High Priority Alert</div>
+                    <div style="color: #b91c1c;">{alert}</div>
+                </div>
+                """, unsafe_allow_html=True)
+
+        if detected_symptoms:
+            grid_c1, grid_c2 = st.columns(2)
+            
+            with grid_c1:
+                st.markdown("""
+                <div class="clinical-card">
+                    <div style="font-weight: 600; margin-bottom: 1rem;">Potential Etiology</div>
+                """, unsafe_allow_html=True)
+                
+                if causes:
+                    for cause in causes:
+                        st.markdown(f"<div style='margin-bottom: 0.25rem; font-size: 0.95rem; border-bottom: 1px dashed #e2e8f0; padding-bottom: 0.25rem;'>• {cause}</div>", unsafe_allow_html=True)
+                else:
+                    st.markdown("<div style='font-style: italic; color: #94a3b8;'>No specific match found.</div>", unsafe_allow_html=True)
+                
+                st.markdown("</div>", unsafe_allow_html=True)
+
+            with grid_c2:
+                st.markdown("""
+                <div class="clinical-card">
+                    <div style="font-weight: 600; margin-bottom: 1rem;">Therapeutic Suggestions</div>
+                """, unsafe_allow_html=True)
+                
+                if meds:
+                    for m in meds:
+                        st.markdown(f"<div style='margin-bottom: 0.25rem; font-size: 0.95rem; border-bottom: 1px dashed #e2e8f0; padding-bottom: 0.25rem;'>• {m}</div>", unsafe_allow_html=True)
+                else:
+                    st.markdown("<div style='font-style: italic; color: #94a3b8;'>No specific recommendations.</div>", unsafe_allow_html=True)
+                
+                st.markdown("</div>", unsafe_allow_html=True)
+
+        elif not emergencies:
+            st.markdown("""
+            <div class="info-box">
+                <div style="font-weight: 600; margin-bottom: 0.5rem; color: #1e40af;">No Keywords Detected</div>
+                <div style="color: #1e3a8a;">The input text did not trigger any specific rules in the current database. Please verify the terminology.</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+    else:
+        st.info("Awaiting input data to proceed with analysis.")
